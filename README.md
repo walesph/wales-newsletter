@@ -1,16 +1,28 @@
-# React + Vite
+# wales-newsletter — ⚠️ RETIRED PROTOTYPE (superseded)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> **이 저장소는 프로토타입입니다. 더 이상 여기서 작업하지 마세요.**
+>
+> 뉴스레터(WALES通信) 기능은 **WALES 운영 포털(walesportal.com)** 에 통합되어
+> 이제 그쪽에서 관리·확장됩니다.
 
-Currently, two official plugins are available:
+## 어디로 옮겨졌나
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **운영 코드베이스:** WALES 포털 (`walesportal.com`) — `walesph/Walesportal`
+- **위치(어드민 메뉴):**
+  - 뉴스레터 → **Agents ▸ Newsletter**
+  - 학생 후기 → **Agents ▸ Testimonials**
+  - IELTS/PTE 성적 → **Classes ▸ Exam Scores**
+- **백엔드:** Supabase Edge Function `make-server-46ccf3aa`
+  - `POST /ai/translate` (Anthropic 다국어 번역)
+  - `POST /newsletter/send` (Resend 발송)
+- **머지:** PR walesph/Walesportal#425 (+ #423/#424)
 
-## React Compiler
+## 이 프로토타입의 역할
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+독립 Vite+React 앱으로 시작해 데이터 구조 / 다국어 i18n / AI 번역 / 도넛·막대 차트 /
+이메일 템플릿 / Resend 발송 흐름을 검증했습니다. 그 설계가 위 포털에 이식되었습니다.
+참고용 기획서: [PLAN.md](./PLAN.md).
 
-## Expanding the ESLint configuration
+## 앞으로
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+새 기능·수정은 모두 **WALES 포털(walesportal.com)** 에서 작업하세요. 이 저장소는 보관용입니다.
