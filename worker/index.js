@@ -122,6 +122,94 @@ async function sendNewsletter(env, { newsletter_id, only_language }) {
   return { total: results.length, sent, failed: results.length - sent, results }
 }
 
+// ── AI 번역 (Anthropic) ─────────────────────────────────────────────
+const TARGET_LANGS = ['en', 'ko', 'zh-Hant', 'zh-Hans', 'vi', 'ar']
+const LANG_NAME = {
+  en: 'English',
+  ko: 'Korean',
+  'zh-Hant': 'Traditional Chinese (Taiwan, 繁體中文)',
+  'zh-Hans': 'Simplified Chinese (Mainland China, 简体中文)',
+  vi: 'Vietnamese',
+  ar: 'Arabic',
+}
+const TRANSLATABLE = ['cover_message', 'interview_role', 'interview_quote', 'interview_body', 'availability_text', 'staff_column']
+
+async function callClaude(env, system, user) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: env.TRANSLATE_MODEL || 'claude-sonnet-4-6',
+      max_tokens: 4000,
+      system,
+      messages: [{ role: 'user', content: user }],
+    }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data?.error?.message || `Anthropic ${res.status}`)
+  return data?.content?.[0]?.text ?? ''
+}
+
+function parseJsonLoose(text) {
+  let t = String(text).trim()
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fence) t = fence[1].trim()
+  return JSON.parse(t)
+}
+
+async function translateOne(env, fields, lang) {
+  const system =
+    `You are a professional translator for a Philippine English-language school's monthly newsletter (WALES通信). ` +
+    `Translate the given JSON values from Japanese into ${LANG_NAME[lang]}. ` +
+    `Keep the warm, polite marketing tone aimed at study-abroad agents. Keep proper nouns (WALES, Baguio, personal names) intact. ` +
+    `Return ONLY a JSON object with the SAME keys and translated string values. No markdown, no commentary.`
+  const text = await callClaude(env, system, JSON.stringify(fields, null, 2))
+  return parseJsonLoose(text)
+}
+
+// 일본어 마스터 → 대상 언어들로 번역, newsletter_translations 에 draft 로 upsert.
+// 검수완료(approved) 언어는 overwrite=true 가 아니면 건너뜀.
+async function translateNewsletter(env, { newsletter_id, languages, overwrite }) {
+  const nlRows = await (await sb(env, `newsletters?id=eq.${newsletter_id}&select=*`)).json()
+  const nl = nlRows[0]
+  if (!nl) throw new Error('newsletter not found')
+
+  const fields = {}
+  for (const k of TRANSLATABLE) if (nl[k]) fields[k] = nl[k]
+  if (!Object.keys(fields).length) throw new Error('no translatable fields')
+
+  const existing = await (
+    await sb(env, `newsletter_translations?newsletter_id=eq.${newsletter_id}&select=language,review_status`)
+  ).json()
+  const statusByLang = {}
+  for (const r of existing ?? []) statusByLang[r.language] = r.review_status
+
+  const targets = (languages?.length ? languages : TARGET_LANGS).filter((l) => l !== 'ja')
+  const results = []
+  for (const lang of targets) {
+    if (statusByLang[lang] === 'approved' && !overwrite) {
+      results.push({ language: lang, status: 'skipped(approved)' })
+      continue
+    }
+    try {
+      const translated = await translateOne(env, fields, lang)
+      await sb(env, 'newsletter_translations?on_conflict=newsletter_id,language', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ newsletter_id, language: lang, translated_data: translated, review_status: 'draft' }),
+      })
+      results.push({ language: lang, status: 'translated', fields: Object.keys(translated).length })
+    } catch (e) {
+      results.push({ language: lang, status: 'failed', error: String(e) })
+    }
+  }
+  return { translated: results.filter((r) => r.status === 'translated').length, total: targets.length, results }
+}
+
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } })
 }
@@ -149,6 +237,24 @@ export default {
     const { newsletter_id, test_email, only_language } = payload ?? {}
     if (!newsletter_id) return json({ error: 'newsletter_id required' }, 400)
 
+    const path = new URL(req.url).pathname
+
+    // ── AI 번역: POST /translate ──
+    if (path.endsWith('/translate')) {
+      try {
+        const r = await translateNewsletter(env, {
+          newsletter_id,
+          languages: payload.languages,
+          overwrite: payload.overwrite,
+        })
+        return json({ ok: true, ...r })
+      } catch (e) {
+        console.error(JSON.stringify({ evt: 'translate_error', error: String(e) }))
+        return json({ ok: false, error: String(e) }, 500)
+      }
+    }
+
+    // ── 발송: POST /send (또는 기본) ──
     try {
       // 테스트 발송 — 단일 수신자, 로그 미기록
       if (test_email) {

@@ -11,7 +11,8 @@
   "vars": {
     "SUPABASE_URL": "https://your-project.supabase.co",
     "NEWSLETTER_FROM": "WALES Academy <newsletter@walesportal.com>",
-    "AUTO_SEND": "false"
+    "AUTO_SEND": "false",
+    "TRANSLATE_MODEL": "claude-sonnet-4-6"
   },
 
   // 매월 1일 00:00 UTC. AUTO_SEND="true" 일 때만 실제 발송됨.
