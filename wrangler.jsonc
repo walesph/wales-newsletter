@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wales-newsletter-worker",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-06-20",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+
+  // 비밀이 아닌 설정값. 시크릿은 `wrangler secret put` 으로 따로 등록.
+  "vars": {
+    "SUPABASE_URL": "https://your-project.supabase.co",
+    "NEWSLETTER_FROM": "WALES Academy <newsletter@walesportal.com>",
+    "AUTO_SEND": "false"
+  },
+
+  // 매월 1일 00:00 UTC. AUTO_SEND="true" 일 때만 실제 발송됨.
+  "triggers": { "crons": ["0 0 1 * *"] }
+
+  // 시크릿(런타임 env): SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, ANTHROPIC_API_KEY, FUNCTION_SECRET
+}

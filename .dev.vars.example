@@ -1,0 +1,6 @@
+# Worker 로컬 개발용 시크릿 — `wrangler dev` 가 자동으로 읽음.
+# 실제 파일명은 .dev.vars (gitignore 됨). 운영 배포는 `wrangler secret put` 사용.
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
+ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxx
+FUNCTION_SECRET=choose-a-long-random-string
