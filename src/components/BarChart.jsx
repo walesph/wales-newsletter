@@ -1,5 +1,6 @@
-// 이메일 HTML 로도 옮기기 쉽도록 JS 없이 div 폭으로 그리는 단순 막대 차트
-export default function BarChart({ data = [], labelFor, unit = '' }) {
+// 이메일 HTML 로도 옮기기 쉽도록 JS 없이 div 폭으로 그리는 단순 막대 차트.
+// showShare=false 면 (전체 대비 %) 괄호 표기를 생략 (값 자체가 이미 %일 때).
+export default function BarChart({ data = [], labelFor, unit = '', showShare = true }) {
   const max = Math.max(1, ...data.map((d) => d.value))
   const total = data.reduce((s, d) => s + d.value, 0)
 
@@ -13,13 +14,14 @@ export default function BarChart({ data = [], labelFor, unit = '' }) {
             <span className="w-20 shrink-0 text-slate-600">{labelFor(d.key)}</span>
             <span className="relative h-5 flex-1 overflow-hidden rounded bg-slate-100">
               <span
-                className="absolute inset-y-0 left-0 rounded bg-violet-500"
+                className="absolute inset-y-0 start-0 rounded bg-violet-500"
                 style={{ width: `${pct}%` }}
               />
             </span>
-            <span className="w-20 shrink-0 text-right tabular-nums text-slate-500">
+            <span className="w-24 shrink-0 text-end tabular-nums text-slate-500">
               {d.value}
-              {unit} <span className="text-slate-400">({share}%)</span>
+              {unit}
+              {showShare && <span className="text-slate-400"> ({share}%)</span>}
             </span>
           </li>
         )
