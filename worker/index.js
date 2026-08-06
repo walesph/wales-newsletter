@@ -21,12 +21,22 @@ function barTable(data, labelFor, unit) {
   const total = data.reduce((s, d) => s + d.value, 0)
   const rows = data
     .map((d) => {
-      const w = Math.round((d.value / max) * 240)
+      // Percentage, not pixels. A 240px bar plus two nowrap columns demanded
+      // ~397px inside the ~295px a 375px phone leaves after the shell and
+      // section padding, so the whole email widened and every reader zoomed
+      // out to fit. A proportional bar shrinks with the column instead.
+      const pct = Math.max(2, Math.round((d.value / max) * 100))
       const share = total ? Math.round((d.value / total) * 100) : 0
+      // Nested table rather than a styled span: Outlook's Word engine ignores
+      // width on inline-block, and this is the one shape every client honours.
+      const bar = `<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse"><tr>`
+        + `<td style="width:${pct}%;height:14px;background:#7c3aed;border-radius:3px;font-size:0;line-height:0">&nbsp;</td>`
+        + (pct < 100 ? `<td style="font-size:0;line-height:0">&nbsp;</td>` : '')
+        + `</tr></table>`
       return `<tr>
-        <td style="padding:4px 8px;color:#475569;font-size:13px;white-space:nowrap">${esc(labelFor(d.key))}</td>
-        <td style="padding:4px 8px;width:100%"><span style="display:inline-block;height:14px;width:${w}px;background:#7c3aed;border-radius:3px"></span></td>
-        <td style="padding:4px 8px;color:#64748b;font-size:13px;white-space:nowrap;text-align:right">${d.value}${unit} (${share}%)</td>
+        <td style="padding:4px 6px;color:#475569;font-size:13px;white-space:nowrap">${esc(labelFor(d.key))}</td>
+        <td style="padding:4px 6px;width:100%">${bar}</td>
+        <td style="padding:4px 6px;color:#64748b;font-size:13px;white-space:nowrap;text-align:right">${d.value}${unit} (${share}%)</td>
       </tr>`
     })
     .join('')
@@ -37,7 +47,7 @@ function renderEmail(nl, lang) {
   const l = L[lang] ?? L.ja
   const vol = l.vol.replace('{n}', nl.vol)
   const section = (title, inner) =>
-    `<tr><td style="padding:22px 28px;border-top:1px solid #f1f5f9"><h2 style="margin:0 0 12px;font-size:17px;color:#0f172a">${esc(title)}</h2>${inner}</td></tr>`
+    `<tr><td style="padding:22px 22px;border-top:1px solid #f1f5f9"><h2 style="margin:0 0 12px;font-size:17px;color:#0f172a">${esc(title)}</h2>${inner}</td></tr>`
   return `<!doctype html><html><body style="margin:0;background:#f1f5f9;font-family:-apple-system,Segoe UI,Roboto,sans-serif">
   <table cellpadding="0" cellspacing="0" style="width:100%;background:#f1f5f9"><tr><td align="center" style="padding:24px 12px">
   <table cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#fff;border-radius:14px;overflow:hidden">
@@ -51,7 +61,7 @@ function renderEmail(nl, lang) {
     ${section(l.age, barTable(nl.age_data ?? [], (k) => l.ageBand[k] ?? k, l.unit))}
     ${nl.availability_text ? section(l.availability, `<p style="margin:0;padding:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;color:#92400e">${esc(nl.availability_text)}</p>`) : ''}
     ${nl.staff_column ? section(l.staffColumn, `<p style="margin:0;color:#475569;line-height:1.6">${esc(nl.staff_column)}</p>`) : ''}
-    <tr><td style="padding:18px 28px;background:#f8fafc;color:#94a3b8;font-size:12px;text-align:center">© ${new Date(nl.published_date).getFullYear()} WALES Academy · walesportal.com</td></tr>
+    <tr><td style="padding:18px 22px;background:#f8fafc;color:#94a3b8;font-size:12px;text-align:center">© ${new Date(nl.published_date).getFullYear()} WALES Academy · walesportal.com</td></tr>
   </table></td></tr></table></body></html>`
 }
 
